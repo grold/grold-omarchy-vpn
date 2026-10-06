@@ -32,6 +32,7 @@ class Backend : public QObject {
     Q_PROPERTY(QVariantList sessionLogs READ sessionLogs NOTIFY sessionLogsChanged)
     Q_PROPERTY(QString statusMessage READ statusMessage NOTIFY statusMessageChanged)
     Q_PROPERTY(bool daemonAvailable READ daemonAvailable NOTIFY daemonAvailableChanged)
+    Q_PROPERTY(QString defaultProfile READ defaultProfile NOTIFY defaultProfileChanged)
 
 public:
     explicit Backend(QObject *parent = nullptr);
@@ -54,11 +55,13 @@ public:
     QVariantList sessionLogs() const { return m_sessionLogs; }
     QString statusMessage() const { return m_statusMessage; }
     bool daemonAvailable() const { return m_daemonAvailable; }
+    QString defaultProfile() const { return m_defaultProfile; }
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void toggleConnection(const QString &profileName = QString());
     Q_INVOKABLE void connectProfile(const QString &name);
     Q_INVOKABLE void disconnectVpn();
+    Q_INVOKABLE void setDefaultProfile(const QString &name);
     Q_INVOKABLE bool saveProfile(const QString &name, const QString &confContent,
                                  const QString &splitMode, bool killSwitch,
                                  const QStringList &apps, const QStringList &ips);
@@ -82,6 +85,7 @@ signals:
     void sessionLogsChanged();
     void statusMessageChanged();
     void daemonAvailableChanged();
+    void defaultProfileChanged();
     void fileImportSuccess(const QString &profileName);
     void fileImportError(const QString &error);
 
@@ -98,10 +102,13 @@ private:
     QJsonObject sendDaemonCommand(const QJsonObject &req);
     QString profilesDir() const;
     QString historyFilePath() const;
+    QString defaultProfileFilePath() const;
+    void loadDefaultProfile();
 
     bool m_connected = false;
     QString m_activeProfileName;
     QString m_activeInterface;
+    QString m_defaultProfile;
     qint64 m_rxBytes = 0;
     qint64 m_txBytes = 0;
     qint64 m_rxRate = 0;

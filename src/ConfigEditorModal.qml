@@ -11,6 +11,9 @@ Dialog {
     width: Math.min(parent.width - 40, 780)
     height: Math.min(parent.height - 40, 680)
 
+    Material.theme: Material.Dark
+    Material.accent: theme.accent
+
     property bool isNew: false
     property string profileName: ""
     property string initialConf: ""
@@ -179,7 +182,7 @@ Dialog {
                         TextField { id: mtuInput; Layout.fillWidth: true; placeholderText: "1420" }
                     }
 
-                    Rectangle { Layout.fillWidth: true; height: 1; color: "#333" }
+                    Rectangle { Layout.fillWidth: true; height: 1; color: "#27272a" }
                     Label { text: "AmneziaWG Obfuscation Parameters (AWG 3.1)"; font.bold: true; color: Material.accent }
 
                     GridLayout {
@@ -214,7 +217,7 @@ Dialog {
                         }
                     }
 
-                    Rectangle { Layout.fillWidth: true; height: 1; color: "#333" }
+                    Rectangle { Layout.fillWidth: true; height: 1; color: "#27272a" }
                     Label { text: "Peer"; font.bold: true; color: Material.accent }
 
                     RowLayout {

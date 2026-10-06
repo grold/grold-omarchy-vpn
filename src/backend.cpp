@@ -32,6 +32,7 @@ Backend::Backend(QObject *parent)
     m_pollTimer->start(1000);
 
     loadProfiles();
+    loadDefaultProfile();
     loadHistory();
     pollDaemonStatus();
 }
@@ -44,6 +45,38 @@ QString Backend::profilesDir() const {
     QString path = QDir::homePath() + "/.config/grold-omarchy-vpn/profiles";
     QDir().mkpath(path);
     return path;
+}
+
+QString Backend::defaultProfileFilePath() const {
+    return QDir::homePath() + "/.config/grold-omarchy-vpn/default-profile";
+}
+
+void Backend::loadDefaultProfile() {
+    QFile file(defaultProfileFilePath());
+    QString def;
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        def = QString::fromUtf8(file.readAll()).trimmed();
+    }
+    if (def != m_defaultProfile) {
+        m_defaultProfile = def;
+        emit defaultProfileChanged();
+    }
+}
+
+void Backend::setDefaultProfile(const QString &name) {
+    QString dir = QDir::homePath() + "/.config/grold-omarchy-vpn";
+    QDir().mkpath(dir);
+    QFile file(defaultProfileFilePath());
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        file.write(name.toUtf8());
+        file.close();
+    }
+    if (m_defaultProfile != name) {
+        m_defaultProfile = name;
+        emit defaultProfileChanged();
+    }
+    m_statusMessage = "Default profile set to " + name;
+    emit statusMessageChanged();
 }
 
 QString Backend::historyFilePath() const {
@@ -216,6 +249,7 @@ void Backend::pollDaemonStatus() {
 
 void Backend::refresh() {
     loadProfiles();
+    loadDefaultProfile();
     pollDaemonStatus();
 }
 
@@ -259,9 +293,14 @@ void Backend::toggleConnection(const QString &profileName) {
     if (m_connected) {
         disconnectVpn();
     } else {
-        QString target = profileName.isEmpty() ?
-            (m_profiles.isEmpty() ? QString() : m_profiles.first().toMap()["name"].toString())
-            : profileName;
+        QString target = profileName;
+        if (target.isEmpty()) {
+            if (!m_defaultProfile.isEmpty()) {
+                target = m_defaultProfile;
+            } else if (!m_profiles.isEmpty()) {
+                target = m_profiles.first().toMap()["name"].toString();
+            }
+        }
         if (!target.isEmpty()) {
             connectProfile(target);
         }

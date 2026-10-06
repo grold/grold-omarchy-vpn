@@ -11,6 +11,9 @@ Dialog {
     width: Math.min(parent.width - 40, 720)
     height: Math.min(parent.height - 40, 640)
 
+    Material.theme: Material.Dark
+    Material.accent: theme.accent
+
     property string profileName: ""
     property string currentMode: "off"
     property var selectedApps: []
