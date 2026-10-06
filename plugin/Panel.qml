@@ -10,7 +10,7 @@ Panel {
     id: root
     moduleName: "grold.vpn"
     ipcTarget: "grold.vpn"
-    manageIpc: false
+    manageIpc: true
 
     property int phraseIndex: 0
     readonly property var activePhrases: [
@@ -107,7 +107,7 @@ Panel {
         bar: root.bar
         open: root.opened
         contentWidth: panel.fittedContentWidth(Style.space(360))
-        contentHeight: panel.fittedContentHeight(mainCol.implicitHeight, Style.space(560))
+        contentHeight: panel.fittedContentHeight(mainCol.implicitHeight, Style.space(580))
 
         Column {
             id: mainCol
@@ -258,46 +258,37 @@ Panel {
                 }
             }
 
-            // 4. Scrollable Profile Rows List (ListView matching Omarchy network panel)
-            ListView {
-                id: profilesListView
+            // 4. Profiles List (Column + Repeater matching Omarchy tailscale panel)
+            Column {
+                id: profilesColumn
                 width: parent.width
-                height: Math.min(contentHeight, Style.space(140))
-                spacing: Style.space(4)
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                interactive: contentHeight > height
-                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                spacing: Style.space(6)
 
-                model: vpnService.profiles
-
-                delegate: Item {
-                    required property var modelData
-                    required property int index
-                    width: ListView.view.width
-                    height: rowDelegate.implicitHeight
+                Repeater {
+                    model: vpnService.profiles
 
                     ProfileItemRow {
-                        id: rowDelegate
-                        width: parent.width
+                        required property var modelData
+                        required property int index
+                        width: profilesColumn.width
                         profileName: String(modelData)
                         isActive: vpnService.connected && vpnService.profileName === String(modelData)
                         isDefault: !isActive && vpnService.selectedProfile === String(modelData)
                     }
                 }
-            }
 
-            Text {
-                visible: vpnService.profiles.length === 0
-                width: parent.width
-                textFormat: Text.PlainText
-                text: "No configurations in ~/.config/grold-omarchy-vpn/profiles/"
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                color: root.dim
-                wrapMode: Text.WordWrap
-                topPadding: Style.space(4)
-                bottomPadding: Style.space(4)
+                Text {
+                    visible: vpnService.profiles.length === 0
+                    width: parent.width
+                    textFormat: Text.PlainText
+                    text: "No configurations in ~/.config/grold-omarchy-vpn/profiles/"
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.bodySmall
+                    color: root.dim
+                    wrapMode: Text.WordWrap
+                    topPadding: Style.space(4)
+                    bottomPadding: Style.space(4)
+                }
             }
 
             PanelSeparator {
@@ -328,34 +319,33 @@ Panel {
         property bool isDefault: false
 
         width: parent.width
-        implicitHeight: rowInner.implicitHeight + Style.spacing.rowPaddingY * 2
+        implicitHeight: Style.space(36)
         foreground: root.foreground
         current: isActive || isDefault
         fill: root.hoverFill
         currentFill: isActive ? root.selectedFill : Style.hoverFillFor(root.foreground, Color.accent)
 
-        Row {
-            id: rowInner
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: Style.space(8)
-            anchors.rightMargin: Style.space(8)
-            spacing: Style.space(10)
+        Item {
+            anchors.fill: parent
+            anchors.leftMargin: Style.space(10)
+            anchors.rightMargin: Style.space(10)
 
             // Radio/Selection Indicator
             Rectangle {
+                id: radioDot
                 width: Style.space(8)
                 height: Style.space(8)
                 radius: width / 2
                 color: pRow.isActive ? "#22c55e" : (pRow.isDefault ? Color.accent : "transparent")
                 border.color: (pRow.isActive || pRow.isDefault) ? "transparent" : root.dim
                 border.width: 1.5
+                anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
             }
 
             // Profile Name
             Text {
+                id: nameText
                 textFormat: Text.PlainText
                 text: pRow.profileName
                 color: pRow.isActive ? Color.accent : root.foreground
@@ -363,7 +353,10 @@ Panel {
                 font.pixelSize: Style.font.body
                 font.bold: pRow.isActive || pRow.isDefault
                 elide: Text.ElideRight
-                width: parent.width - Style.space(8) - Style.space(10) - (statusBadge.visible ? statusBadge.implicitWidth + Style.space(8) : 0)
+                anchors.left: radioDot.right
+                anchors.leftMargin: Style.space(10)
+                anchors.right: statusBadge.visible ? statusBadge.left : parent.right
+                anchors.rightMargin: Style.space(8)
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -377,25 +370,24 @@ Panel {
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 font.bold: true
+                anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
 
         MouseArea {
+            id: rowMouseArea
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
                 if (vpnService.connected) {
                     if (pRow.isActive) {
-                        // Clicking the active connected profile disconnects it
                         vpnService.disconnectVpn()
                     } else {
-                        // Clicking another profile switches directly to it
                         vpnService.connectProfile(pRow.profileName)
                     }
                 } else {
-                    // When disconnected, clicking selects it as default AND connects
                     vpnService.saveSelectedProfile(pRow.profileName)
                     vpnService.connectProfile(pRow.profileName)
                 }
@@ -403,7 +395,7 @@ Panel {
         }
 
         PanelToolTip {
-            visible: parent.containsMouse
+            visible: rowMouseArea.containsMouse
             text: pRow.isActive ? "Click to disconnect" : "Click to select and connect"
             fontFamily: root.fontFamily
         }
