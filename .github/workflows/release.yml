@@ -1,0 +1,106 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [ master, main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build & Test (Arch Linux)
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Update system & install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel \
+            git \
+            qt6-base \
+            qt6-declarative \
+            qt6-quickcontrols2 \
+            qt6-wayland \
+            qt6-svg \
+            xdg-desktop-portal \
+            amneziawg-tools \
+            nftables \
+            iproute2
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Mark workspace safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Compile all components
+        run: ./bin/build
+
+      - name: Run Test Suite (Offscreen)
+        run: |
+          export QT_QPA_PLATFORM=offscreen
+          ./bin/test
+
+      - name: Build Arch Linux package (.pkg.tar.zst)
+        run: |
+          useradd -m builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          su builder -c 'cd "$GITHUB_WORKSPACE/pkgbuild" && makepkg -s --noconfirm --nodeps'
+
+          mkdir -p dist
+          mv pkgbuild/*.pkg.tar.zst dist/
+
+      - name: Create standalone binary archive
+        run: |
+          mkdir -p standalone/grold-omarchy-vpn
+          cp -r build/src/grold-omarchy-vpn standalone/grold-omarchy-vpn/
+          cp -r build/daemon/grold-omarchy-vpnd standalone/grold-omarchy-vpn/
+          cp -r build/cli/grold-omarchy-vpn-ctl standalone/grold-omarchy-vpn/
+          cp -r build/cli/grold-omarchy-vpn-run standalone/grold-omarchy-vpn/
+          cp -r daemon/grold-omarchy-vpnd.service standalone/grold-omarchy-vpn/
+          cp -r plugin standalone/grold-omarchy-vpn/
+          cp -r pkgbuild/grold-omarchy-vpn.desktop standalone/grold-omarchy-vpn/
+          cp -r pkgbuild/grold-omarchy-vpn.svg standalone/grold-omarchy-vpn/
+          cp LICENSE README.md standalone/grold-omarchy-vpn/
+          tar -czf dist/grold-omarchy-vpn-bin-x86_64.tar.gz -C standalone grold-omarchy-vpn
+
+      - name: Generate Checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: grold-omarchy-vpn-packages
+          path: dist/*
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    needs: build-and-test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: grold-omarchy-vpn-packages
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
