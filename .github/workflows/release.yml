@@ -24,11 +24,10 @@ jobs:
             git \
             qt6-base \
             qt6-declarative \
-            qt6-quickcontrols2 \
             qt6-wayland \
             qt6-svg \
             xdg-desktop-portal \
-            amneziawg-tools \
+            wireguard-tools \
             nftables \
             iproute2
 

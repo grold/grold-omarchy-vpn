@@ -4,8 +4,10 @@ pkgrel=1
 pkgdesc='WireGuard and AmneziaWG VPN connection manager and widget for Omarchy Linux'
 arch=('x86_64' 'aarch64')
 license=('MIT')
-depends=('qt6-base' 'qt6-declarative' 'qt6-quickcontrols2' 'qt6-wayland' 'xdg-desktop-portal' 'amneziawg-tools' 'nftables' 'iproute2')
-makedepends=('gcc' 'make' 'qt6-base' 'qt6-declarative' 'qt6-quickcontrols2')
+depends=('qt6-base' 'qt6-declarative' 'qt6-wayland' 'xdg-desktop-portal' 'nftables' 'iproute2')
+optdepends=('amneziawg-tools: for AmneziaWG obfuscated protocol support'
+            'wireguard-tools: for standard WireGuard support')
+makedepends=('gcc' 'make' 'qt6-base' 'qt6-declarative')
 source=()
 sha256sums=()
 
