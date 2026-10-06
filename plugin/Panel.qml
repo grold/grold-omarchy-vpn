@@ -12,9 +12,24 @@ Panel {
     ipcTarget: "grold.vpn"
     manageIpc: false
 
+    property int phraseIndex: 0
+    readonly property var activePhrases: [
+        "Shielding connections",
+        "Encrypting packets",
+        "Routing secure tunnel",
+        "Obfuscating traffic",
+        "Guarding gateway",
+        "Securing wire"
+    ]
+    readonly property string heroPhraseText: activePhrases[phraseIndex % activePhrases.length]
+
     readonly property color foreground: bar ? bar.foreground : Color.foreground
+    readonly property color urgent: bar ? bar.urgent : Color.urgent
     readonly property color dim: Qt.darker(foreground, 1.55)
+    readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
     readonly property color barIconColor: vpnService.connected ? foreground : dim
+    readonly property color hoverFill: bar ? Style.hoverFillFor(bar.foreground, Color.accent) : "transparent"
+    readonly property color selectedFill: bar ? Style.selectedFillFor(bar.foreground, Color.accent) : "transparent"
 
     Service {
         id: vpnService
@@ -22,6 +37,16 @@ Panel {
 
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
+
+    Timer {
+        id: phraseTimer
+        interval: 3200
+        repeat: true
+        running: root.opened && vpnService.connected
+        onTriggered: {
+            root.phraseIndex = (root.phraseIndex + 1) % root.activePhrases.length
+        }
+    }
 
     onOpenedChanged: {
         if (opened) {
@@ -45,7 +70,7 @@ Panel {
                        "Live: ↓ " + rateDown + "  ↑ " + rateUp + "\n" +
                        "Total: ↓ " + totalDown + "  ↑ " + totalUp
             } else {
-                return "VPN Disconnected\nRight-click to toggle"
+                return "VPN Disconnected\nRight-click to connect/disconnect"
             }
         }
         onTooltipHoveredChanged: {
@@ -80,275 +105,282 @@ Panel {
         owner: root
         bar: root.bar
         open: root.opened
-        contentWidth: Style.space ? Style.space(330) : 330
-        contentHeight: panel.fittedContentHeight(mainLayout.implicitHeight, Style.space ? Style.space(520) : 520)
+        contentWidth: panel.fittedContentWidth(Style.space(360))
+        contentHeight: panel.fittedContentHeight(mainCol.implicitHeight, Style.space(560))
 
-        ColumnLayout {
-            id: mainLayout
+        Column {
+            id: mainCol
             anchors.fill: parent
-            spacing: 12
+            spacing: Style.space(12)
 
-            // Header: Status Icon, Title, Subtitle, and Switch
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 10
-
-                VpnIcon {
-                    iconSize: 26
-                    color: vpnService.connected ? Color.accent : root.dim
-                    dotColor: "#22c55e"
-                    active: vpnService.connected
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-                    Label {
-                        text: vpnService.connected ? "VPN Connected" : "VPN Disconnected"
-                        font.bold: true
-                        font.pointSize: 11
-                    }
-                    Label {
-                        text: vpnService.connected ? vpnService.profileName : "No active tunnel"
-                        font.pointSize: 9
-                        opacity: 0.7
+            // 1. Panel Hero Header
+            PanelHero {
+                id: hero
+                width: parent.width
+                title: vpnService.connected ? (vpnService.profileName || "VPN Tunnel") : "VPN Tunnel"
+                meta: vpnService.connected ? root.heroPhraseText : "VPN is disconnected"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                iconOpacity: vpnService.connected ? 1.0 : 0.5
+                iconComponent: Component {
+                    VpnIcon {
+                        iconSize: Style.font.display
+                        color: vpnService.connected ? Color.accent : root.dim
+                        dotColor: Color.accent
+                        active: vpnService.connected
                     }
                 }
 
-                Switch {
-                    checked: vpnService.connected
-                    onToggled: vpnService.toggle()
+                trailingControl: Component {
+                    ToggleSwitch {
+                        checked: vpnService.connected
+                        foreground: hero.foreground
+                        onToggled: vpnService.toggle()
+                        PanelToolTip {
+                            visible: parent.containsMouse
+                            text: vpnService.connected ? "Turn VPN off" : "Turn VPN on"
+                            fontFamily: hero.fontFamily
+                        }
+                    }
                 }
             }
 
-            // Statistics Card (Live Rate & Total Transferred)
-            Rectangle {
+            // 2. Telemetry Card (When Connected)
+            CursorSurface {
+                id: statsSurface
                 visible: vpnService.connected
-                Layout.fillWidth: true
-                implicitHeight: statsCol.implicitHeight + 16
-                radius: 8
-                color: "#18181b"
-                border.color: "#27272a"
-                border.width: 1
+                width: parent.width
+                bordered: true
+                foreground: root.foreground
+                fill: root.hoverFill
+                currentFill: root.selectedFill
+                implicitHeight: statsLayout.implicitHeight + Style.space(16)
 
-                ColumnLayout {
-                    id: statsCol
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 8
+                Item {
+                    id: statsLayout
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: Style.space(10)
+                    implicitHeight: Style.space(36)
 
-                    // Live Throughput
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 8
+                    // Left Column: Live Rates
+                    Column {
+                        anchors.left: parent.left
+                        anchors.right: statsDivider.left
+                        anchors.rightMargin: Style.space(8)
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Style.space(2)
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 1
-                            Label {
-                                text: "SPEED"
-                                font.pointSize: 8
-                                font.bold: true
-                                opacity: 0.5
-                            }
-                            Label {
-                                text: "↓ " + vpnService.formatRate(vpnService.rxRate)
-                                color: "#38bdf8"
-                                font.bold: true
-                                font.pointSize: 10
-                            }
+                        Text {
+                            textFormat: Text.PlainText
+                            text: "CURRENT SPEED"
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                            font.bold: true
+                            color: root.dim
                         }
-
-                        Rectangle { width: 1; height: 24; color: "#2d2d32" }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 1
-                            Label {
-                                text: ""
-                                font.pointSize: 8
-                            }
-                            Label {
-                                text: "↑ " + vpnService.formatRate(vpnService.txRate)
-                                color: "#4ade80"
-                                font.bold: true
-                                font.pointSize: 10
-                            }
+                        Text {
+                            textFormat: Text.PlainText
+                            text: "↓ " + vpnService.formatRate(vpnService.rxRate) + "  ↑ " + vpnService.formatRate(vpnService.txRate)
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            font.bold: true
+                            color: Color.accent
                         }
                     }
 
-                    Rectangle { Layout.fillWidth: true; height: 1; color: "#27272a" }
+                    // Divider
+                    Rectangle {
+                        id: statsDivider
+                        anchors.centerIn: parent
+                        width: 1
+                        height: Style.space(26)
+                        color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.12)
+                    }
 
-                    // Total Transferred
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 8
+                    // Right Column: Total Transferred
+                    Column {
+                        anchors.left: statsDivider.right
+                        anchors.right: parent.right
+                        anchors.leftMargin: Style.space(8)
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Style.space(2)
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 1
-                            Label {
-                                text: "TOTAL TRANSFERRED"
-                                font.pointSize: 8
-                                font.bold: true
-                                opacity: 0.5
-                            }
-                            Label {
-                                text: "↓ " + vpnService.formatBytes(vpnService.rxBytes)
-                                color: "#93c5fd"
-                                font.pointSize: 9.5
-                            }
+                        Text {
+                            textFormat: Text.PlainText
+                            text: "TOTAL TRANSFERRED"
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                            font.bold: true
+                            color: root.dim
                         }
-
-                        Rectangle { width: 1; height: 24; color: "#2d2d32" }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 1
-                            Label {
-                                text: ""
-                                font.pointSize: 8
-                            }
-                            Label {
-                                text: "↑ " + vpnService.formatBytes(vpnService.txBytes)
-                                color: "#86efac"
-                                font.pointSize: 9.5
-                            }
+                        Text {
+                            textFormat: Text.PlainText
+                            text: "↓ " + vpnService.formatBytes(vpnService.rxBytes) + "  ↑ " + vpnService.formatBytes(vpnService.txBytes)
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            color: root.foreground
                         }
                     }
                 }
             }
 
-            // Profiles Header
-            RowLayout {
-                Layout.fillWidth: true
-                Label {
-                    text: "AVAILABLE PROFILES"
-                    font.pointSize: 8.5
-                    font.bold: true
-                    opacity: 0.6
-                    Layout.fillWidth: true
+            PanelSeparator {
+                foreground: root.foreground
+            }
+
+            // 3. Profiles Section Header
+            Item {
+                width: parent.width
+                implicitHeight: Math.max(headerTitle.implicitHeight, headerCount.implicitHeight)
+
+                PanelSectionHeader {
+                    id: headerTitle
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "PROFILES"
+                    foreground: root.foreground
+                    fontFamily: root.fontFamily
                 }
-                Label {
+
+                Text {
+                    id: headerCount
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    textFormat: Text.PlainText
                     visible: vpnService.profiles.length > 0
                     text: vpnService.profiles.length + " saved"
-                    font.pointSize: 8
-                    opacity: 0.4
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    color: root.dim
                 }
             }
 
-            // Scrollable Profiles List
-            ScrollView {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(Math.max(vpnService.profiles.length * 36, 36), 144)
+            // 4. Scrollable Profile Rows List (ListView matching Omarchy network panel)
+            ListView {
+                id: profilesListView
+                width: parent.width
+                height: Math.min(contentHeight, Style.space(140))
+                spacing: Style.space(4)
                 clip: true
-                ScrollBar.vertical.policy: (vpnService.profiles.length > 4) ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+                boundsBehavior: Flickable.StopAtBounds
+                interactive: contentHeight > height
+                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
-                ListView {
-                    id: profilesList
-                    width: parent.width
-                    model: vpnService.profiles
-                    spacing: 2
+                model: vpnService.profiles
 
-                    delegate: Rectangle {
-                        width: profilesList.width
-                        height: 34
-                        radius: 6
-                        color: (vpnService.connected && vpnService.profileName === modelData)
-                                ? "#27272a"
-                                : (profMa.containsMouse ? "#1f1f23" : "transparent")
+                delegate: Item {
+                    required property var modelData
+                    required property int index
+                    width: ListView.view.width
+                    height: rowDelegate.implicitHeight
 
-                        MouseArea {
-                            id: profMa
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (vpnService.connected && vpnService.profileName === modelData) {
-                                    vpnService.disconnectVpn()
-                                } else {
-                                    vpnService.connectProfile(modelData)
-                                }
-                            }
-                        }
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 10
-                            anchors.rightMargin: 10
-                            spacing: 8
-
-                            Rectangle {
-                                width: 7
-                                height: 7
-                                radius: 3.5
-                                color: (vpnService.connected && vpnService.profileName === modelData) ? "#22c55e" : "#555"
-                            }
-                            Label {
-                                text: modelData
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight
-                                font.bold: vpnService.connected && vpnService.profileName === modelData
-                                color: (vpnService.connected && vpnService.profileName === modelData) ? Color.accent : root.foreground
-                            }
-                            Label {
-                                visible: vpnService.connected && vpnService.profileName === modelData
-                                text: "Active"
-                                font.pointSize: 8
-                                color: Color.accent
-                            }
-                        }
+                    ProfileItemRow {
+                        id: rowDelegate
+                        width: parent.width
+                        profileName: String(modelData)
+                        isActive: vpnService.connected && vpnService.profileName === String(modelData)
                     }
                 }
             }
 
-            Label {
+            Text {
                 visible: vpnService.profiles.length === 0
-                text: "No profiles in ~/.config/grold-omarchy-vpn/profiles/"
-                font.pointSize: 9
-                opacity: 0.5
-                wrapMode: Text.Wrap
-                Layout.fillWidth: true
+                width: parent.width
+                textFormat: Text.PlainText
+                text: "No configurations in ~/.config/grold-omarchy-vpn/profiles/"
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                color: root.dim
+                wrapMode: Text.WordWrap
+                topPadding: Style.space(4)
+                bottomPadding: Style.space(4)
             }
 
-            Rectangle {
-                Layout.fillWidth: true
-                height: 1
-                color: "#27272a"
+            PanelSeparator {
+                foreground: root.foreground
             }
 
-            // Footer: Button to open full VPN manager desktop app
-            Rectangle {
-                Layout.fillWidth: true
-                height: 36
-                radius: 6
-                color: footerMa.containsMouse ? Color.accent : "#222226"
-
-                MouseArea {
-                    id: footerMa
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        root.close()
-                        vpnService.openApp()
-                    }
+            // 5. Footer Action Button (Native Omarchy Button)
+            Button {
+                width: parent.width
+                text: "Open VPN Manager..."
+                iconText: "󰢹"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                bordered: true
+                onClicked: {
+                    root.close()
+                    vpnService.openApp()
                 }
+            }
+        }
+    }
 
-                RowLayout {
-                    anchors.centerIn: parent
-                    spacing: 6
-                    Label {
-                        text: "󰢹"
-                        font.pixelSize: 13
-                        color: footerMa.containsMouse ? "black" : root.foreground
-                    }
-                    Label {
-                        text: "Open VPN Manager"
-                        font.bold: true
-                        font.pointSize: 9.5
-                        color: footerMa.containsMouse ? "black" : root.foreground
-                    }
+    // Inline Profile Row using Omarchy's CursorSurface
+    component ProfileItemRow: CursorSurface {
+        id: pRow
+        property string profileName: ""
+        property bool isActive: false
+
+        width: parent.width
+        implicitHeight: rowInner.implicitHeight + Style.spacing.rowPaddingY * 2
+        foreground: root.foreground
+        current: isActive
+        fill: root.hoverFill
+        currentFill: root.selectedFill
+
+        Row {
+            id: rowInner
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: Style.space(8)
+            anchors.rightMargin: Style.space(8)
+            spacing: Style.space(10)
+
+            Rectangle {
+                width: Style.space(7)
+                height: Style.space(7)
+                radius: width / 2
+                color: pRow.isActive ? Color.accent : root.dim
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                textFormat: Text.PlainText
+                text: pRow.profileName
+                color: pRow.isActive ? Color.accent : root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+                font.bold: pRow.isActive
+                elide: Text.ElideRight
+                width: parent.width - Style.space(7) - Style.space(10) - (pRow.isActive ? Style.space(50) : 0)
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                visible: pRow.isActive
+                textFormat: Text.PlainText
+                text: "Active"
+                color: Color.accent
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                if (pRow.isActive) {
+                    vpnService.disconnectVpn()
+                } else {
+                    vpnService.connectProfile(pRow.profileName)
                 }
             }
         }
