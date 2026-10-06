@@ -305,9 +305,14 @@ bool Backend::deleteProfile(const QString &name) {
 }
 
 bool Backend::importConf(const QString &filePath) {
-    QFileInfo fi(filePath);
+    QString cleanPath = filePath;
+    if (cleanPath.startsWith("file://")) {
+        QUrl u(cleanPath);
+        cleanPath = u.toLocalFile();
+    }
+    QFileInfo fi(cleanPath);
     if (!fi.exists()) {
-        emit fileImportError("Selected file does not exist");
+        emit fileImportError("Selected file does not exist: " + cleanPath);
         return false;
     }
 

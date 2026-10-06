@@ -10,6 +10,7 @@ Panel {
     id: root
     moduleName: "grold.vpn"
     ipcTarget: "grold.vpn"
+    manageIpc: false
 
     readonly property color foreground: bar ? bar.foreground : Color.foreground
     readonly property color dim: Qt.darker(foreground, 1.55)
@@ -150,13 +151,31 @@ Panel {
                 clip: true
                 model: vpnService.profiles
 
-                delegate: ItemDelegate {
+                delegate: Rectangle {
                     width: profilesList.width
                     height: 36
-                    highlighted: vpnService.connected && vpnService.profileName === modelData
+                    radius: 4
+                    color: (vpnService.connected && vpnService.profileName === modelData) ? "#27272a" : (ma.containsMouse ? "#1c1c1f" : "transparent")
 
-                    contentItem: RowLayout {
+                    MouseArea {
+                        id: ma
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: {
+                            if (vpnService.connected && vpnService.profileName === modelData) {
+                                vpnService.disconnectVpn()
+                            } else {
+                                vpnService.connectProfile(modelData)
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
                         spacing: 8
+
                         Rectangle {
                             width: 6
                             height: 6
@@ -175,14 +194,6 @@ Panel {
                             color: Color.accent
                         }
                     }
-
-                    onClicked: {
-                        if (vpnService.connected && vpnService.profileName === modelData) {
-                            vpnService.disconnectVpn()
-                        } else {
-                            vpnService.connectProfile(modelData)
-                        }
-                    }
                 }
             }
 
@@ -198,13 +209,28 @@ Panel {
             Rectangle { Layout.fillWidth: true; height: 1; color: "#27272a" }
 
             // Footer: Button to open full app
-            Button {
+            Rectangle {
                 Layout.fillWidth: true
-                text: "Open VPN Manager..."
-                highlighted: false
-                onClicked: {
-                    root.close()
-                    vpnService.openApp()
+                height: 36
+                radius: 6
+                color: footerMa.containsMouse ? Color.accent : "#222226"
+
+                MouseArea {
+                    id: footerMa
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: {
+                        root.close()
+                        vpnService.openApp()
+                    }
+                }
+
+                Label {
+                    anchors.centerIn: parent
+                    text: "Open VPN Manager..."
+                    font.bold: true
+                    font.pointSize: 10
+                    color: footerMa.containsMouse ? "black" : root.foreground
                 }
             }
         }

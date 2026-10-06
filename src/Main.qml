@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import QtQuick.Dialogs
 
 ApplicationWindow {
     id: win
@@ -139,7 +140,7 @@ ApplicationWindow {
 
                         Button {
                             text: "Import .conf..."
-                            onClicked: backend.requestImportDialog()
+                            onClicked: importFileDialog.open()
                         }
 
                         Button {
@@ -176,7 +177,7 @@ ApplicationWindow {
                                 text: "Import .conf File"
                                 highlighted: true
                                 Layout.alignment: Qt.AlignHCenter
-                                onClicked: backend.requestImportDialog()
+                                onClicked: importFileDialog.open()
                             }
                         }
                     }
@@ -302,6 +303,15 @@ ApplicationWindow {
 
     SplitTunnelModal {
         id: splitTunnelModal
+    }
+
+    FileDialog {
+        id: importFileDialog
+        title: "Import WireGuard / AmneziaWG Configuration"
+        nameFilters: ["VPN Configurations (*.conf)", "All Files (*)"]
+        onAccepted: {
+            backend.importConf(selectedFile.toString())
+        }
     }
 
     Dialog {
