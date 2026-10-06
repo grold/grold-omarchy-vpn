@@ -10,6 +10,7 @@ Panel {
     id: root
     moduleName: "grold.vpn"
     ipcTarget: "grold.vpn"
+    manageIpc: false
 
     readonly property color foreground: bar ? bar.foreground : Color.foreground
     readonly property color dim: Qt.darker(foreground, 1.55)
@@ -21,6 +22,13 @@ Panel {
 
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
+
+    onOpenedChanged: {
+        if (opened) {
+            vpnService.refresh()
+            vpnService.refreshProfiles()
+        }
+    }
 
     BarIconButton {
         id: button
@@ -43,6 +51,7 @@ Panel {
         onTooltipHoveredChanged: {
             if (tooltipHovered && !root.opened) {
                 vpnService.refresh()
+                vpnService.refreshProfiles()
             }
         }
         iconComponent: Component {

@@ -19,6 +19,7 @@ Item {
     property bool refreshing: false
 
     property string _targetProfileToConnect: ""
+    property string _targetToggleArg: ""
 
     function formatBytes(bytes) {
         if (!bytes || bytes <= 0) return "0 B"
@@ -43,7 +44,10 @@ Item {
         interval: 2000
         repeat: true
         running: true
-        onTriggered: root.refresh()
+        onTriggered: {
+            root.refresh()
+            root.refreshProfiles()
+        }
     }
 
     Component.onCompleted: {
@@ -59,11 +63,24 @@ Item {
 
     function refreshProfiles() {
         if (!profilesListProcess.running) {
+            profilesListProcess.stdout.collected = []
             profilesListProcess.running = true
         }
     }
 
     function toggle() {
+        // If connected, toggle disconnects
+        // If disconnected, toggle connects with active/selected or first available profile
+        if (root.connected) {
+            _targetToggleArg = ""
+        } else {
+            var home = Quickshell.env("HOME")
+            var prof = root.profileName
+            if (!prof && root.profiles && root.profiles.length > 0) {
+                prof = root.profiles[0]
+            }
+            _targetToggleArg = prof ? (home + "/.config/grold-omarchy-vpn/profiles/" + prof + ".conf") : ""
+        }
         if (!toggleProcess.running) {
             toggleProcess.running = true
         }
@@ -100,7 +117,7 @@ Item {
                     if (doc && doc.ok && doc.status) {
                         var st = doc.status
                         root.connected = st.connected === true
-                        root.profileName = st.profileName || ""
+                        if (st.profileName) root.profileName = st.profileName
                         root.activeInterface = st.interface || ""
                         root.rxBytes = st.rxBytes || 0
                         root.txBytes = st.txBytes || 0
@@ -117,20 +134,29 @@ Item {
 
     Process {
         id: toggleProcess
-        command: ["grold-omarchy-vpn-ctl", "toggle"]
-        onExited: function(code) { root.refresh() }
+        command: root._targetToggleArg !== "" ? ["grold-omarchy-vpn-ctl", "toggle", root._targetToggleArg] : ["grold-omarchy-vpn-ctl", "toggle"]
+        onExited: function(code) {
+            root.refresh()
+            root.refreshProfiles()
+        }
     }
 
     Process {
         id: connectProcess
         command: ["grold-omarchy-vpn-ctl", "connect", root._targetProfileToConnect]
-        onExited: function(code) { root.refresh() }
+        onExited: function(code) {
+            root.refresh()
+            root.refreshProfiles()
+        }
     }
 
     Process {
         id: disconnectProcess
         command: ["grold-omarchy-vpn-ctl", "disconnect"]
-        onExited: function(code) { root.refresh() }
+        onExited: function(code) {
+            root.refresh()
+            root.refreshProfiles()
+        }
     }
 
     Process {
