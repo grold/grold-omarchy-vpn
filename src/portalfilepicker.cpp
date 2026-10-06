@@ -2,16 +2,68 @@
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDBusObjectPath>
+#include <QDBusMetaType>
 #include <QDBusArgument>
 #include <QUrl>
 #include <QDebug>
 #include <QRandomGenerator>
 
-PortalFilePicker::PortalFilePicker(QObject *parent) : QObject(parent) {}
+struct FilterPattern {
+    uint type; // 0 = glob, 1 = mime
+    QString pattern;
+};
+Q_DECLARE_METATYPE(FilterPattern)
+
+struct Filter {
+    QString name;
+    QList<FilterPattern> patterns;
+};
+Q_DECLARE_METATYPE(Filter)
+
+typedef QList<Filter> FilterList;
+Q_DECLARE_METATYPE(FilterList)
+
+QDBusArgument &operator<<(QDBusArgument &arg, const FilterPattern &p) {
+    arg.beginStructure();
+    arg << p.type << p.pattern;
+    arg.endStructure();
+    return arg;
+}
+
+const QDBusArgument &operator>>(const QDBusArgument &arg, FilterPattern &p) {
+    arg.beginStructure();
+    arg >> p.type >> p.pattern;
+    arg.endStructure();
+    return arg;
+}
+
+QDBusArgument &operator<<(QDBusArgument &arg, const Filter &f) {
+    arg.beginStructure();
+    arg << f.name;
+    arg << f.patterns;
+    arg.endStructure();
+    return arg;
+}
+
+const QDBusArgument &operator>>(const QDBusArgument &arg, Filter &f) {
+    arg.beginStructure();
+    arg >> f.name;
+    arg >> f.patterns;
+    arg.endStructure();
+    return arg;
+}
+
+PortalFilePicker::PortalFilePicker(QObject *parent) : QObject(parent) {
+    qDBusRegisterMetaType<FilterPattern>();
+    qDBusRegisterMetaType<QList<FilterPattern>>();
+    qDBusRegisterMetaType<Filter>();
+    qDBusRegisterMetaType<FilterList>();
+}
 
 void PortalFilePicker::openFile(const QString &title, const QString &filterName, const QStringList &patterns) {
     QDBusConnection bus = QDBusConnection::sessionBus();
     if (!bus.isConnected()) {
+        qWarning() << "PortalFilePicker: DBus session bus not connected";
         emit canceled();
         return;
     }
@@ -24,7 +76,7 @@ void PortalFilePicker::openFile(const QString &title, const QString &filterName,
     sender.replace('.', '_').replace(':', '_');
     QString requestPath = QString("/org/freedesktop/portal/desktop/request/%1/%2").arg(sender, token);
 
-    // Connect to predictable request path
+    // Pre-connect to predicted request path
     bus.connect("org.freedesktop.portal.Desktop",
                 requestPath,
                 "org.freedesktop.portal.Request",
@@ -37,15 +89,14 @@ void PortalFilePicker::openFile(const QString &title, const QString &filterName,
     options["multiple"] = false;
 
     // Filters structure: a(sa(us))
-    QVariantList filterList;
+    FilterList filters;
+    Filter f;
+    f.name = filterName;
     for (const QString &pattern : patterns) {
-        QVariantList patternEntry;
-        patternEntry << (uint)0 << pattern;
-        filterList << QVariant(patternEntry);
+        f.patterns.append({0, pattern});
     }
-    QVariantList currentFilter;
-    currentFilter << filterName << QVariant(filterList);
-    options["filters"] = QVariantList{QVariant(currentFilter)};
+    filters.append(f);
+    options["filters"] = QVariant::fromValue(filters);
 
     QDBusMessage msg = QDBusMessage::createMethodCall(
         "org.freedesktop.portal.Desktop",
