@@ -93,11 +93,17 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Parse Version
+        id: version_clean
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "clean_version=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Extract Changelog for Release
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
         with:
-          version: ${{ github.ref_name }}
+          version: ${{ steps.version_clean.outputs.clean_version }}
           path: ./CHANGELOG.md
 
       - name: Download Build Artifacts
