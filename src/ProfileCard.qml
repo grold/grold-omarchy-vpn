@@ -58,19 +58,18 @@ Rectangle {
                         font.bold: true
                     }
                 }
-                if (profileData.splitMode && profileData.splitMode !== "off") {
-                    Rectangle {
-                        radius: 4
-                        color: "#334155"
-                        height: 18
-                        width: splitLabel.width + 10
-                        Label {
-                            id: splitLabel
-                            anchors.centerIn: parent
-                            text: "Split: " + profileData.splitMode
-                            font.pointSize: 9
-                            color: "#94a3b8"
-                        }
+                Rectangle {
+                    visible: !!(profileData.splitMode && profileData.splitMode !== "off")
+                    radius: 4
+                    color: "#334155"
+                    height: 18
+                    width: splitLabel.width + 10
+                    Label {
+                        id: splitLabel
+                        anchors.centerIn: parent
+                        text: "Split: " + (profileData.splitMode || "")
+                        font.pointSize: 9
+                        color: "#94a3b8"
                     }
                 }
             }

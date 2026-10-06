@@ -158,67 +158,67 @@ ApplicationWindow {
                         }
                     }
 
-                    if (backend.profiles.length === 0) {
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            color: "transparent"
-                            ColumnLayout {
-                                anchors.centerIn: parent
-                                spacing: 12
-                                Label {
-                                    text: "No VPN profiles configured yet"
-                                    font.pointSize: 14
-                                    opacity: 0.5
-                                    Layout.alignment: Qt.AlignHCenter
-                                }
-                                Button {
-                                    text: "Import .conf File"
-                                    highlighted: true
-                                    Layout.alignment: Qt.AlignHCenter
-                                    onClicked: backend.requestImportDialog()
-                                }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: "transparent"
+                        visible: backend.profiles.length === 0
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            spacing: 12
+                            Label {
+                                text: "No VPN profiles configured yet"
+                                font.pointSize: 14
+                                opacity: 0.5
+                                Layout.alignment: Qt.AlignHCenter
+                            }
+                            Button {
+                                text: "Import .conf File"
+                                highlighted: true
+                                Layout.alignment: Qt.AlignHCenter
+                                onClicked: backend.requestImportDialog()
                             }
                         }
-                    } else {
-                        ScrollView {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            clip: true
+                    }
 
-                            ListView {
-                                id: profilesListView
-                                width: parent.width
-                                spacing: 10
-                                model: backend.profiles
+                    ScrollView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        visible: backend.profiles.length > 0
 
-                                delegate: ProfileCard {
-                                    profileData: modelData
-                                    onConnectRequested: {
-                                        if (isActive) backend.disconnectVpn()
-                                        else backend.connectProfile(modelData.name)
-                                    }
-                                    onEditRequested: {
-                                        configEditorModal.isNew = false
-                                        configEditorModal.profileName = modelData.name
-                                        configEditorModal.initialConf = backend.readProfileConf(modelData.name)
-                                        configEditorModal.splitMode = modelData.splitMode || "off"
-                                        configEditorModal.killSwitch = modelData.killSwitch || false
-                                        configEditorModal.splitApps = modelData.splitApps || []
-                                        configEditorModal.splitIps = modelData.splitIps || []
-                                        configEditorModal.open()
-                                    }
-                                    onSplitRequested: {
-                                        splitTunnelModal.profileName = modelData.name
-                                        splitTunnelModal.currentMode = modelData.splitMode || "off"
-                                        splitTunnelModal.selectedApps = (modelData.splitApps || []).slice()
-                                        splitTunnelModal.customIps = (modelData.splitIps || []).slice()
-                                        splitTunnelModal.open()
-                                    }
-                                    onDeleteRequested: {
-                                        deleteConfirmDialog.targetProfile = modelData.name
-                                        deleteConfirmDialog.open()
-                                    }
+                        ListView {
+                            id: profilesListView
+                            width: parent.width
+                            spacing: 10
+                            model: backend.profiles
+
+                            delegate: ProfileCard {
+                                profileData: modelData
+                                onConnectRequested: {
+                                    if (isActive) backend.disconnectVpn()
+                                    else backend.connectProfile(modelData.name)
+                                }
+                                onEditRequested: {
+                                    configEditorModal.isNew = false
+                                    configEditorModal.profileName = modelData.name
+                                    configEditorModal.initialConf = backend.readProfileConf(modelData.name)
+                                    configEditorModal.splitMode = modelData.splitMode || "off"
+                                    configEditorModal.killSwitch = modelData.killSwitch || false
+                                    configEditorModal.splitApps = modelData.splitApps || []
+                                    configEditorModal.splitIps = modelData.splitIps || []
+                                    configEditorModal.open()
+                                }
+                                onSplitRequested: {
+                                    splitTunnelModal.profileName = modelData.name
+                                    splitTunnelModal.currentMode = modelData.splitMode || "off"
+                                    splitTunnelModal.selectedApps = (modelData.splitApps || []).slice()
+                                    splitTunnelModal.customIps = (modelData.splitIps || []).slice()
+                                    splitTunnelModal.open()
+                                }
+                                onDeleteRequested: {
+                                    deleteConfirmDialog.targetProfile = modelData.name
+                                    deleteConfirmDialog.open()
                                 }
                             }
                         }
@@ -308,9 +308,11 @@ ApplicationWindow {
         id: deleteConfirmDialog
         title: "Delete Profile"
         modal: true
+        width: 360
         anchors.centerIn: parent
         property string targetProfile: ""
         contentItem: ColumnLayout {
+            spacing: 12
             Label { text: "Are you sure you want to delete profile '" + deleteConfirmDialog.targetProfile + "'?" }
             RowLayout {
                 Button { text: "Cancel"; onClicked: deleteConfirmDialog.close() }

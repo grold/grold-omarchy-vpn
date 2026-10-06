@@ -104,34 +104,33 @@ Panel {
             }
 
             // Live throughput rates when connected
-            if (vpnService.connected) {
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 44
-                    radius: 6
-                    color: "#18181b"
-                    border.color: "#27272a"
+            Rectangle {
+                visible: vpnService.connected
+                Layout.fillWidth: true
+                height: 44
+                radius: 6
+                color: "#18181b"
+                border.color: "#27272a"
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 8
-                        Label {
-                            text: "↓ " + (vpnService.rxRate / 1024).toFixed(1) + " KB/s"
-                            color: "#38bdf8"
-                            font.bold: true
-                            font.pointSize: 10
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-                        Rectangle { width: 1; height: 20; color: "#333" }
-                        Label {
-                            text: "↑ " + (vpnService.txRate / 1024).toFixed(1) + " KB/s"
-                            color: "#4ade80"
-                            font.bold: true
-                            font.pointSize: 10
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignHCenter
-                        }
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    Label {
+                        text: "↓ " + (vpnService.rxRate / 1024).toFixed(1) + " KB/s"
+                        color: "#38bdf8"
+                        font.bold: true
+                        font.pointSize: 10
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    Rectangle { width: 1; height: 20; color: "#333" }
+                    Label {
+                        text: "↑ " + (vpnService.txRate / 1024).toFixed(1) + " KB/s"
+                        color: "#4ade80"
+                        font.bold: true
+                        font.pointSize: 10
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
                     }
                 }
             }
@@ -169,8 +168,11 @@ Panel {
                             Layout.fillWidth: true
                             font.bold: vpnService.connected && vpnService.profileName === modelData
                         }
-                        if (vpnService.connected && vpnService.profileName === modelData) {
-                            Label { text: "Active"; font.pointSize: 8; color: Color.accent }
+                        Label {
+                            visible: vpnService.connected && vpnService.profileName === modelData
+                            text: "Active"
+                            font.pointSize: 8
+                            color: Color.accent
                         }
                     }
 
@@ -184,14 +186,13 @@ Panel {
                 }
             }
 
-            if (vpnService.profiles.length === 0) {
-                Label {
-                    text: "No profiles found in ~/.config/grold-omarchy-vpn/profiles/"
-                    font.pointSize: 9
-                    opacity: 0.5
-                    wrapMode: Text.Wrap
-                    Layout.fillWidth: true
-                }
+            Label {
+                visible: vpnService.profiles.length === 0
+                text: "No profiles found in ~/.config/grold-omarchy-vpn/profiles/"
+                font.pointSize: 9
+                opacity: 0.5
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
             }
 
             Rectangle { Layout.fillWidth: true; height: 1; color: "#27272a" }
