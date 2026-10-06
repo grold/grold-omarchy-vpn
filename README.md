@@ -6,11 +6,23 @@ Built following the [Omarchy App](https://omarchy.org) conventions: one window, 
 
 ---
 
+## Screenshots
+
+<div align="center">
+  <img src="docs/images/vpn-manager.png" alt="VPN Manager App" width="700" />
+  <p><em>Desktop Application: Hero telemetry bar, active throughput rates, profile management, and shortcuts.</em></p>
+  <br />
+  <img src="docs/images/vpn-widget.png" alt="Omarchy Shell Bar Widget" width="380" />
+  <p><em>Omarchy System Bar Widget (<code>grold.vpn</code>): Right-click quick toggle, default profile switcher, and live stats.</em></p>
+</div>
+
+---
+
 ## Features
 
-- **WireGuard & AmneziaWG 3.1**: Full support for standard WireGuard `.conf` files as well as AmneziaWG obfuscation parameters (`Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1`, `H2`, `H3`, `H4`).
+- **WireGuard & AmneziaWG 3.1**: Full support for standard WireGuard `.conf` files as well as AmneziaWG obfuscation parameters (`Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1`, `H2`, `H3`, `H4`, `I1`, `I2`).
 - **Hybrid UI Form Factor**:
-  - **Omarchy Shell Bar Widget (`grold.vpn`)**: Lives in your status bar; displays an icon with connection dot indicator, real-time download/upload speed, quick ON/OFF toggle, profile switcher, and one-click launcher to open the main app.
+  - **Omarchy Shell Bar Widget (`grold.vpn`)**: Lives in your status bar; displays an icon with connection dot indicator, real-time download/upload speed, quick ON/OFF toggle, right-click instant connection, profile switcher with default profile badges, and one-click launcher to open the main app.
   - **Desktop Application (`grold-omarchy-vpn`)**: Standalone Qt Quick GUI for profile management, split tunneling rules, live bandwidth charts, and session logs.
 - **Split Tunneling (App & IP Routing)**:
   - **Exclusive / Bypass Mode**: Routes all system traffic through the VPN, except selected applications and IP/CIDR ranges.
@@ -23,11 +35,21 @@ Built following the [Omarchy App](https://omarchy.org) conventions: one window, 
 
 ---
 
-## Keyboard Shortcuts
+## Keyboard Shortcuts (Desktop App)
 
 | Key | Action |
 | :--- | :--- |
-| `Space` | Toggle VPN connection (Connect / Disconnect active profile) |
+| `Space` | Toggle VPN connection (Connect / Disconnect active or default profile) |
+| `Enter` / `Return` | Connect to currently selected profile |
+| `Down` / `J` | Select next profile in list |
+| `Up` / `K` | Select previous profile in list |
+| `D` | Set selected profile as Default |
+| `A` | Import configuration (`.conf`) via Desktop Portal |
+| `N` | Create new profile manually |
+| `E` | Edit configuration of selected profile |
+| `S` | Configure split tunneling routing rules |
+| `Delete` | Delete selected profile |
+| `R` | Refresh profiles and daemon status |
 | `?` | Toggle shortcuts help overlay |
 | `Q` | Quit application |
 
@@ -114,6 +136,7 @@ Install as an Arch package & shell plugin:
 
 - VPN Profiles: `~/.config/grold-omarchy-vpn/profiles/<name>.conf` (0600 permissions)
 - Profile Metadata: `~/.config/grold-omarchy-vpn/profiles/<name>.meta.json`
+- Default Profile: `~/.config/grold-omarchy-vpn/default-profile`
 - Historical Logs: `~/.local/share/grold-omarchy-vpn/history.json`
 - Daemon Socket: `/run/grold-omarchy-vpn/daemon.sock`
 - Shell Plugin: `~/.config/omarchy/plugins/grold.vpn/`
