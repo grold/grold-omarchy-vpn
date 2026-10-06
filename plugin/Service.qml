@@ -20,6 +20,24 @@ Item {
 
     property string _targetProfileToConnect: ""
 
+    function formatBytes(bytes) {
+        if (!bytes || bytes <= 0) return "0 B"
+        var k = 1024
+        var sizes = ["B", "KB", "MB", "GB", "TB"]
+        var i = Math.floor(Math.log(bytes) / Math.log(k))
+        if (i < 0) i = 0
+        if (i >= sizes.length) i = sizes.length - 1
+        return (bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 1) + " " + sizes[i]
+    }
+
+    function formatRate(bytesPerSec) {
+        if (!bytesPerSec || bytesPerSec <= 0) return "0 KB/s"
+        if (bytesPerSec < 1024 * 1024) {
+            return (bytesPerSec / 1024).toFixed(1) + " KB/s"
+        }
+        return (bytesPerSec / (1024 * 1024)).toFixed(1) + " MB/s"
+    }
+
     Timer {
         id: pollTimer
         interval: 2000
