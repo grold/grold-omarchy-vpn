@@ -8,3 +8,7 @@ moc_*
 qrc_*
 Makefile*
 .qmake.stash
+
+# Artifacts & planning files
+/artifacts/
+plan.md
