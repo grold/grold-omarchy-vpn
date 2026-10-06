@@ -10,7 +10,6 @@ Panel {
     id: root
     moduleName: "grold.vpn"
     ipcTarget: "grold.vpn"
-    manageIpc: false
 
     readonly property color foreground: bar ? bar.foreground : Color.foreground
     readonly property color dim: Qt.darker(foreground, 1.55)
@@ -18,15 +17,6 @@ Panel {
 
     Service {
         id: vpnService
-    }
-
-    ShellIpc {
-        target: root.ipcTarget
-        function open(): void { root.open() }
-        function close(): void { root.close() }
-        function toggle(): void { root.toggle() }
-        function toggleVpn(): string { vpnService.toggle(); return "ok" }
-        function status(): string { return vpnService.connected ? "connected" : "disconnected" }
     }
 
     implicitWidth: button.implicitWidth
