@@ -23,6 +23,7 @@ static QStringList splitAndTrim(const QString &str) {
 VpnProfile VpnProfile::fromConf(const QString &name, const QString &confContent) {
     VpnProfile profile;
     profile.name = name;
+    profile.rawConf = confContent;
 
     enum Section { None, Interface, Peer };
     Section currentSection = None;
@@ -41,14 +42,14 @@ VpnProfile VpnProfile::fromConf(const QString &name, const QString &confContent)
         }
 
         if (line.compare("[Interface]", Qt::CaseInsensitive) == 0) {
-            if (currentSection == Peer) {
+            if (currentSection == Peer && (!currentPeer.publicKey.isEmpty() || !currentPeer.endpoint.isEmpty())) {
                 profile.peers.append(currentPeer);
                 currentPeer = VpnPeerConfig();
             }
             currentSection = Interface;
             continue;
         } else if (line.compare("[Peer]", Qt::CaseInsensitive) == 0) {
-            if (currentSection == Peer) {
+            if (currentSection == Peer && (!currentPeer.publicKey.isEmpty() || !currentPeer.endpoint.isEmpty())) {
                 profile.peers.append(currentPeer);
                 currentPeer = VpnPeerConfig();
             }
@@ -83,14 +84,24 @@ VpnProfile VpnProfile::fromConf(const QString &name, const QString &confContent)
                 profile.interfaceConfig.s1 = value.toInt();
             } else if (key.compare("S2", Qt::CaseInsensitive) == 0) {
                 profile.interfaceConfig.s2 = value.toInt();
+            } else if (key.compare("S3", Qt::CaseInsensitive) == 0) {
+                profile.interfaceConfig.s3 = value.toInt();
+            } else if (key.compare("S4", Qt::CaseInsensitive) == 0) {
+                profile.interfaceConfig.s4 = value.toInt();
             } else if (key.compare("H1", Qt::CaseInsensitive) == 0) {
-                profile.interfaceConfig.h1 = value.toLongLong();
+                profile.interfaceConfig.h1 = value;
             } else if (key.compare("H2", Qt::CaseInsensitive) == 0) {
-                profile.interfaceConfig.h2 = value.toLongLong();
+                profile.interfaceConfig.h2 = value;
             } else if (key.compare("H3", Qt::CaseInsensitive) == 0) {
-                profile.interfaceConfig.h3 = value.toLongLong();
+                profile.interfaceConfig.h3 = value;
             } else if (key.compare("H4", Qt::CaseInsensitive) == 0) {
-                profile.interfaceConfig.h4 = value.toLongLong();
+                profile.interfaceConfig.h4 = value;
+            } else if (key.compare("I1", Qt::CaseInsensitive) == 0) {
+                profile.interfaceConfig.i1 = value;
+            } else if (key.compare("I2", Qt::CaseInsensitive) == 0) {
+                profile.interfaceConfig.i2 = value;
+            } else {
+                profile.interfaceConfig.extra[key] = value;
             }
         } else if (currentSection == Peer) {
             if (key.compare("PublicKey", Qt::CaseInsensitive) == 0) {
@@ -107,7 +118,7 @@ VpnProfile VpnProfile::fromConf(const QString &name, const QString &confContent)
         }
     }
 
-    if (currentSection == Peer) {
+    if (currentSection == Peer && (!currentPeer.publicKey.isEmpty() || !currentPeer.endpoint.isEmpty())) {
         profile.peers.append(currentPeer);
     }
 
@@ -115,6 +126,10 @@ VpnProfile VpnProfile::fromConf(const QString &name, const QString &confContent)
 }
 
 QString VpnProfile::toConf() const {
+    if (!rawConf.trimmed().isEmpty()) {
+        return rawConf;
+    }
+
     QString out;
     QTextStream ts(&out);
 
@@ -141,10 +156,18 @@ QString VpnProfile::toConf() const {
     if (interfaceConfig.jmax.has_value()) ts << "Jmax = " << *interfaceConfig.jmax << "\n";
     if (interfaceConfig.s1.has_value()) ts << "S1 = " << *interfaceConfig.s1 << "\n";
     if (interfaceConfig.s2.has_value()) ts << "S2 = " << *interfaceConfig.s2 << "\n";
-    if (interfaceConfig.h1.has_value()) ts << "H1 = " << *interfaceConfig.h1 << "\n";
-    if (interfaceConfig.h2.has_value()) ts << "H2 = " << *interfaceConfig.h2 << "\n";
-    if (interfaceConfig.h3.has_value()) ts << "H3 = " << *interfaceConfig.h3 << "\n";
-    if (interfaceConfig.h4.has_value()) ts << "H4 = " << *interfaceConfig.h4 << "\n";
+    if (interfaceConfig.s3.has_value()) ts << "S3 = " << *interfaceConfig.s3 << "\n";
+    if (interfaceConfig.s4.has_value()) ts << "S4 = " << *interfaceConfig.s4 << "\n";
+    if (!interfaceConfig.h1.isEmpty()) ts << "H1 = " << interfaceConfig.h1 << "\n";
+    if (!interfaceConfig.h2.isEmpty()) ts << "H2 = " << interfaceConfig.h2 << "\n";
+    if (!interfaceConfig.h3.isEmpty()) ts << "H3 = " << interfaceConfig.h3 << "\n";
+    if (!interfaceConfig.h4.isEmpty()) ts << "H4 = " << interfaceConfig.h4 << "\n";
+    if (!interfaceConfig.i1.isEmpty()) ts << "I1 = " << interfaceConfig.i1 << "\n";
+    if (!interfaceConfig.i2.isEmpty()) ts << "I2 = " << interfaceConfig.i2 << "\n";
+
+    for (auto it = interfaceConfig.extra.cbegin(); it != interfaceConfig.extra.cend(); ++it) {
+        ts << it.key() << " = " << it.value() << "\n";
+    }
 
     for (const auto &peer : peers) {
         ts << "\n[Peer]\n";
@@ -190,10 +213,14 @@ QJsonObject VpnProfile::toJson() const {
     if (interfaceConfig.jmax.has_value()) iface["jmax"] = *interfaceConfig.jmax;
     if (interfaceConfig.s1.has_value()) iface["s1"] = *interfaceConfig.s1;
     if (interfaceConfig.s2.has_value()) iface["s2"] = *interfaceConfig.s2;
-    if (interfaceConfig.h1.has_value()) iface["h1"] = *interfaceConfig.h1;
-    if (interfaceConfig.h2.has_value()) iface["h2"] = *interfaceConfig.h2;
-    if (interfaceConfig.h3.has_value()) iface["h3"] = *interfaceConfig.h3;
-    if (interfaceConfig.h4.has_value()) iface["h4"] = *interfaceConfig.h4;
+    if (interfaceConfig.s3.has_value()) iface["s3"] = *interfaceConfig.s3;
+    if (interfaceConfig.s4.has_value()) iface["s4"] = *interfaceConfig.s4;
+    if (!interfaceConfig.h1.isEmpty()) iface["h1"] = interfaceConfig.h1;
+    if (!interfaceConfig.h2.isEmpty()) iface["h2"] = interfaceConfig.h2;
+    if (!interfaceConfig.h3.isEmpty()) iface["h3"] = interfaceConfig.h3;
+    if (!interfaceConfig.h4.isEmpty()) iface["h4"] = interfaceConfig.h4;
+    if (!interfaceConfig.i1.isEmpty()) iface["i1"] = interfaceConfig.i1;
+    if (!interfaceConfig.i2.isEmpty()) iface["i2"] = interfaceConfig.i2;
     root["interface"] = iface;
 
     QJsonArray peerArray;
@@ -237,10 +264,14 @@ VpnProfile VpnProfile::fromJson(const QJsonObject &json) {
     if (iface.contains("jmax")) p.interfaceConfig.jmax = iface["jmax"].toInt();
     if (iface.contains("s1")) p.interfaceConfig.s1 = iface["s1"].toInt();
     if (iface.contains("s2")) p.interfaceConfig.s2 = iface["s2"].toInt();
-    if (iface.contains("h1")) p.interfaceConfig.h1 = iface["h1"].toInteger();
-    if (iface.contains("h2")) p.interfaceConfig.h2 = iface["h2"].toInteger();
-    if (iface.contains("h3")) p.interfaceConfig.h3 = iface["h3"].toInteger();
-    if (iface.contains("h4")) p.interfaceConfig.h4 = iface["h4"].toInteger();
+    if (iface.contains("s3")) p.interfaceConfig.s3 = iface["s3"].toInt();
+    if (iface.contains("s4")) p.interfaceConfig.s4 = iface["s4"].toInt();
+    if (iface.contains("h1")) p.interfaceConfig.h1 = iface["h1"].toVariant().toString();
+    if (iface.contains("h2")) p.interfaceConfig.h2 = iface["h2"].toVariant().toString();
+    if (iface.contains("h3")) p.interfaceConfig.h3 = iface["h3"].toVariant().toString();
+    if (iface.contains("h4")) p.interfaceConfig.h4 = iface["h4"].toVariant().toString();
+    if (iface.contains("i1")) p.interfaceConfig.i1 = iface["i1"].toString();
+    if (iface.contains("i2")) p.interfaceConfig.i2 = iface["i2"].toString();
 
     const auto peersArr = json["peers"].toArray();
     for (const auto &val : peersArr) {
@@ -272,6 +303,7 @@ VpnProfile VpnProfile::loadFromFile(const QString &confPath) {
 
     VpnProfile profile = VpnProfile::fromConf(baseName, content);
     profile.filePath = confPath;
+    profile.rawConf = content;
 
     // Load accompanying metadata if present
     QString metaPath = fi.absolutePath() + "/" + baseName + ".meta.json";

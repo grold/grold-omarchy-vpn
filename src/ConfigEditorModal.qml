@@ -19,6 +19,8 @@ Dialog {
     property var splitApps: []
     property var splitIps: []
 
+    property var extraProps: ({})
+
     onOpened: {
         rawEditor.text = initialConf
         if (isNew && initialConf === "") {
@@ -31,15 +33,17 @@ Dialog {
     function loadFieldsFromConf(text) {
         var lines = text.split(/\r?\n/)
         var section = ""
+        extraProps = {}
         for (var i = 0; i < lines.length; i++) {
-            var l = lines[i].trim()
-            if (l.indexOf("#") !== -1) l = l.substring(0, l.indexOf("#")).trim()
-            if (l === "[Interface]") { section = "Interface"; continue; }
-            if (l === "[Peer]") { section = "Peer"; continue; }
-            var eq = l.indexOf("=")
+            var rawLine = lines[i].trim()
+            if (rawLine === "" || rawLine.startsWith("#")) continue
+            if (rawLine === "[Interface]") { section = "Interface"; continue; }
+            if (rawLine === "[Peer]") { section = "Peer"; continue; }
+            var eq = rawLine.indexOf("=")
             if (eq === -1) continue
-            var k = l.substring(0, eq).trim().toLowerCase()
-            var v = l.substring(eq + 1).trim()
+            var k = rawLine.substring(0, eq).trim().toLowerCase()
+            var origKey = rawLine.substring(0, eq).trim()
+            var v = rawLine.substring(eq + 1).trim()
             if (section === "Interface") {
                 if (k === "privatekey") privKeyInput.text = v
                 else if (k === "address") addrInput.text = v
@@ -51,10 +55,15 @@ Dialog {
                 else if (k === "jmax") jmaxInput.text = v
                 else if (k === "s1") s1Input.text = v
                 else if (k === "s2") s2Input.text = v
+                else if (k === "s3") s3Input.text = v
+                else if (k === "s4") s4Input.text = v
                 else if (k === "h1") h1Input.text = v
                 else if (k === "h2") h2Input.text = v
                 else if (k === "h3") h3Input.text = v
                 else if (k === "h4") h4Input.text = v
+                else if (k === "i1") i1Input.text = v
+                else if (k === "i2") i2Input.text = v
+                else extraProps[origKey] = v
             } else if (section === "Peer") {
                 if (k === "publickey") pubKeyInput.text = v
                 else if (k === "presharedkey") pskInput.text = v
@@ -77,10 +86,18 @@ Dialog {
         if (jmaxInput.text) out += "Jmax = " + jmaxInput.text + "\n"
         if (s1Input.text) out += "S1 = " + s1Input.text + "\n"
         if (s2Input.text) out += "S2 = " + s2Input.text + "\n"
+        if (s3Input.text) out += "S3 = " + s3Input.text + "\n"
+        if (s4Input.text) out += "S4 = " + s4Input.text + "\n"
         if (h1Input.text) out += "H1 = " + h1Input.text + "\n"
         if (h2Input.text) out += "H2 = " + h2Input.text + "\n"
         if (h3Input.text) out += "H3 = " + h3Input.text + "\n"
         if (h4Input.text) out += "H4 = " + h4Input.text + "\n"
+        if (i1Input.text) out += "I1 = " + i1Input.text + "\n"
+        if (i2Input.text) out += "I2 = " + i2Input.text + "\n"
+
+        for (var prop in extraProps) {
+            out += prop + " = " + extraProps[prop] + "\n"
+        }
 
         out += "\n[Peer]\n"
         if (pubKeyInput.text) out += "PublicKey = " + pubKeyInput.text + "\n"

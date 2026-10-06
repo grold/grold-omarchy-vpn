@@ -70,16 +70,53 @@ private slots:
         QCOMPARE(*profile.interfaceConfig.s1, 15);
         QVERIFY(profile.interfaceConfig.s2.has_value());
         QCOMPARE(*profile.interfaceConfig.s2, 30);
-        QVERIFY(profile.interfaceConfig.h1.has_value());
-        QCOMPARE(*profile.interfaceConfig.h1, 12345678LL);
-        QVERIFY(profile.interfaceConfig.h4.has_value());
-        QCOMPARE(*profile.interfaceConfig.h4, 45678901LL);
+        QCOMPARE(profile.interfaceConfig.h1, QString("12345678"));
+        QCOMPARE(profile.interfaceConfig.h4, QString("45678901"));
 
         QString regenerated = profile.toConf();
         VpnProfile roundtrip = VpnProfile::fromConf("test-awg-roundtrip", regenerated);
         QCOMPARE(roundtrip.isAmnezia(), true);
         QCOMPARE(*roundtrip.interfaceConfig.jc, 4);
-        QCOMPARE(*roundtrip.interfaceConfig.h1, 12345678LL);
+        QCOMPARE(roundtrip.interfaceConfig.h1, QString("12345678"));
+    }
+
+    void parseOmarchyAwgConf() {
+        QString conf =
+            "[Interface]\n"
+            "PrivateKey = eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee=\n"
+            "Address = 10.9.9.13/32\n"
+            "DNS = 1.1.1.1, 1.0.0.1\n"
+            "MTU = 1280\n"
+            "Jc = 4\n"
+            "Jmin = 71\n"
+            "Jmax = 198\n"
+            "S1 = 16\n"
+            "S2 = 119\n"
+            "S3 = 40\n"
+            "S4 = 8\n"
+            "H1 = 79463399-782207545\n"
+            "H2 = 940171855-991351637\n"
+            "H3 = 1474762049-1731296708\n"
+            "H4 = 1775911685-2001019834\n"
+            "I1 = <r 246>\n"
+            "\n"
+            "[Peer]\n"
+            "PublicKey = fffffffffffffffffffffffffffffffffffffffffff=\n"
+            "Endpoint = 198.51.100.47:51820\n"
+            "AllowedIPs = 0.0.0.0/0, ::/0\n"
+            "PersistentKeepalive = 33\n";
+
+        VpnProfile profile = VpnProfile::fromConf("omarchy", conf);
+        QCOMPARE(profile.name, QString("omarchy"));
+        QCOMPARE(profile.isAmnezia(), true);
+        QCOMPARE(profile.peers.size(), 1);
+        QCOMPARE(profile.peers[0].endpoint, QString("198.51.100.47:51820"));
+        QCOMPARE(profile.peers[0].publicKey, QString("fffffffffffffffffffffffffffffffffffffffffff="));
+        QCOMPARE(profile.peers[0].allowedIPs.size(), 2);
+        QCOMPARE(profile.peers[0].persistentKeepalive, 33);
+        QCOMPARE(profile.interfaceConfig.h1, QString("79463399-782207545"));
+        QCOMPARE(*profile.interfaceConfig.s3, 40);
+        QCOMPARE(profile.interfaceConfig.i1, QString("<r 246>"));
     }
 
     void fileSaveAndMetadata() {

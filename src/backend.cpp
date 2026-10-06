@@ -316,7 +316,7 @@ bool Backend::importConf(const QString &filePath) {
         return false;
     }
 
-    VpnProfile profile = VpnProfile::loadFromFile(filePath);
+    VpnProfile profile = VpnProfile::loadFromFile(cleanPath);
     profile.name = fi.completeBaseName();
     QString destPath = profilesDir() + "/" + profile.name + ".conf";
 
