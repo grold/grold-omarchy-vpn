@@ -1,5 +1,5 @@
 pkgname=grold-omarchy-vpn
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc='WireGuard and AmneziaWG VPN connection manager and widget for Omarchy Linux'
 arch=('x86_64' 'aarch64')

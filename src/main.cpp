@@ -13,7 +13,7 @@
 int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
     app.setApplicationName("grold-omarchy-vpn");
-    app.setApplicationVersion("0.1.0");
+    app.setApplicationVersion("0.1.1");
 
     app.setDesktopFileName("grold-omarchy-vpn");
     app.setWindowIcon(QIcon::fromTheme("grold-omarchy-vpn"));
