@@ -70,7 +70,8 @@ Panel {
                        "Live: ↓ " + rateDown + "  ↑ " + rateUp + "\n" +
                        "Total: ↓ " + totalDown + "  ↑ " + totalUp
             } else {
-                return "VPN Disconnected\nRight-click to connect/disconnect"
+                var defProf = vpnService.selectedProfile ? (" (" + vpnService.selectedProfile + ")") : ""
+                return "VPN Disconnected" + defProf + "\nRight-click to connect"
             }
         }
         onTooltipHoveredChanged: {
@@ -117,7 +118,7 @@ Panel {
             PanelHero {
                 id: hero
                 width: parent.width
-                title: vpnService.connected ? (vpnService.profileName || "VPN Tunnel") : "VPN Tunnel"
+                title: vpnService.connected ? (vpnService.profileName || "VPN Tunnel") : (vpnService.selectedProfile ? vpnService.selectedProfile : "VPN Tunnel")
                 meta: vpnService.connected ? root.heroPhraseText : "VPN is disconnected"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
@@ -138,7 +139,7 @@ Panel {
                         onToggled: vpnService.toggle()
                         PanelToolTip {
                             visible: parent.containsMouse
-                            text: vpnService.connected ? "Turn VPN off" : "Turn VPN on"
+                            text: vpnService.connected ? "Disconnect VPN" : ("Connect " + (vpnService.selectedProfile || "VPN"))
                             fontFamily: hero.fontFamily
                         }
                     }
@@ -239,7 +240,7 @@ Panel {
                     id: headerTitle
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "PROFILES"
+                    text: "AVAILABLE PROFILES"
                     foreground: root.foreground
                     fontFamily: root.fontFamily
                 }
@@ -281,6 +282,7 @@ Panel {
                         width: parent.width
                         profileName: String(modelData)
                         isActive: vpnService.connected && vpnService.profileName === String(modelData)
+                        isDefault: !isActive && vpnService.selectedProfile === String(modelData)
                     }
                 }
             }
@@ -323,13 +325,14 @@ Panel {
         id: pRow
         property string profileName: ""
         property bool isActive: false
+        property bool isDefault: false
 
         width: parent.width
         implicitHeight: rowInner.implicitHeight + Style.spacing.rowPaddingY * 2
         foreground: root.foreground
-        current: isActive
+        current: isActive || isDefault
         fill: root.hoverFill
-        currentFill: root.selectedFill
+        currentFill: isActive ? root.selectedFill : Style.hoverFillFor(root.foreground, Color.accent)
 
         Row {
             id: rowInner
@@ -340,31 +343,37 @@ Panel {
             anchors.rightMargin: Style.space(8)
             spacing: Style.space(10)
 
+            // Radio/Selection Indicator
             Rectangle {
-                width: Style.space(7)
-                height: Style.space(7)
+                width: Style.space(8)
+                height: Style.space(8)
                 radius: width / 2
-                color: pRow.isActive ? Color.accent : root.dim
+                color: pRow.isActive ? "#22c55e" : (pRow.isDefault ? Color.accent : "transparent")
+                border.color: (pRow.isActive || pRow.isDefault) ? "transparent" : root.dim
+                border.width: 1.5
                 anchors.verticalCenter: parent.verticalCenter
             }
 
+            // Profile Name
             Text {
                 textFormat: Text.PlainText
                 text: pRow.profileName
                 color: pRow.isActive ? Color.accent : root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.body
-                font.bold: pRow.isActive
+                font.bold: pRow.isActive || pRow.isDefault
                 elide: Text.ElideRight
-                width: parent.width - Style.space(7) - Style.space(10) - (pRow.isActive ? Style.space(50) : 0)
+                width: parent.width - Style.space(8) - Style.space(10) - (statusBadge.visible ? statusBadge.implicitWidth + Style.space(8) : 0)
                 anchors.verticalCenter: parent.verticalCenter
             }
 
+            // Status Badge: "Connected" or "Default"
             Text {
-                visible: pRow.isActive
+                id: statusBadge
+                visible: pRow.isActive || pRow.isDefault
                 textFormat: Text.PlainText
-                text: "Active"
-                color: Color.accent
+                text: pRow.isActive ? "Connected" : "Default"
+                color: pRow.isActive ? "#22c55e" : Color.accent
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 font.bold: true
@@ -377,12 +386,26 @@ Panel {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-                if (pRow.isActive) {
-                    vpnService.disconnectVpn()
+                if (vpnService.connected) {
+                    if (pRow.isActive) {
+                        // Clicking the active connected profile disconnects it
+                        vpnService.disconnectVpn()
+                    } else {
+                        // Clicking another profile switches directly to it
+                        vpnService.connectProfile(pRow.profileName)
+                    }
                 } else {
+                    // When disconnected, clicking selects it as default AND connects
+                    vpnService.saveSelectedProfile(pRow.profileName)
                     vpnService.connectProfile(pRow.profileName)
                 }
             }
+        }
+
+        PanelToolTip {
+            visible: parent.containsMouse
+            text: pRow.isActive ? "Click to disconnect" : "Click to select and connect"
+            fontFamily: root.fontFamily
         }
     }
 }

@@ -16,6 +16,7 @@ Item {
     property string splitMode: "off"
     property bool killSwitch: false
     property var profiles: []
+    property string selectedProfile: ""
     property bool refreshing: false
 
     property string _targetProfileToConnect: ""
@@ -51,8 +52,25 @@ Item {
     }
 
     Component.onCompleted: {
+        root.loadSelectedProfile()
         root.refresh()
         root.refreshProfiles()
+    }
+
+    function loadSelectedProfile() {
+        if (!readSelectedProcess.running) {
+            readSelectedProcess.running = true
+        }
+    }
+
+    function saveSelectedProfile(name) {
+        root.selectedProfile = name
+        var home = Quickshell.env("HOME")
+        var dir = home + "/.config/grold-omarchy-vpn"
+        writeSelectedProcess.command = ["sh", "-c", "mkdir -p '" + dir + "' && printf '%s' '" + name + "' > '" + dir + "/default-profile'"]
+        if (!writeSelectedProcess.running) {
+            writeSelectedProcess.running = true
+        }
     }
 
     function refresh() {
@@ -69,13 +87,11 @@ Item {
     }
 
     function toggle() {
-        // If connected, toggle disconnects
-        // If disconnected, toggle connects with active/selected or first available profile
         if (root.connected) {
             _targetToggleArg = ""
         } else {
             var home = Quickshell.env("HOME")
-            var prof = root.profileName
+            var prof = root.selectedProfile || root.profileName
             if (!prof && root.profiles && root.profiles.length > 0) {
                 prof = root.profiles[0]
             }
@@ -87,6 +103,7 @@ Item {
     }
 
     function connectProfile(name) {
+        saveSelectedProfile(name)
         var home = Quickshell.env("HOME")
         var path = home + "/.config/grold-omarchy-vpn/profiles/" + name + ".conf"
         _targetProfileToConnect = path
@@ -117,7 +134,10 @@ Item {
                     if (doc && doc.ok && doc.status) {
                         var st = doc.status
                         root.connected = st.connected === true
-                        if (st.profileName) root.profileName = st.profileName
+                        if (st.profileName) {
+                            root.profileName = st.profileName
+                            if (!root.selectedProfile) root.selectedProfile = st.profileName
+                        }
                         root.activeInterface = st.interface || ""
                         root.rxBytes = st.rxBytes || 0
                         root.txBytes = st.txBytes || 0
@@ -130,6 +150,22 @@ Item {
                 } catch (e) {}
             }
         }
+    }
+
+    Process {
+        id: readSelectedProcess
+        command: ["sh", "-c", "cat \"$HOME/.config/grold-omarchy-vpn/default-profile\" 2>/dev/null || true"]
+        stdout: SplitParser {
+            onRead: function(line) {
+                var name = String(line || "").trim()
+                if (name !== "") root.selectedProfile = name
+            }
+        }
+    }
+
+    Process {
+        id: writeSelectedProcess
+        command: ["true"]
     }
 
     Process {
@@ -172,6 +208,9 @@ Item {
         onExited: function(code) {
             root.profiles = profilesListProcess.stdout.collected.slice()
             profilesListProcess.stdout.collected = []
+            if (!root.selectedProfile && root.profiles.length > 0) {
+                root.selectedProfile = root.profiles[0]
+            }
         }
     }
 
