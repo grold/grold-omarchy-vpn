@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Main.qml</file>
+        <file>ConfigEditorModal.qml</file>
+        <file>SplitTunnelModal.qml</file>
+        <file>StatsView.qml</file>
+        <file>ProfileCard.qml</file>
+    </qresource>
+</RCC>

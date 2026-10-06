@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+"$ROOT/bin/build"
+
+# Run the app
+export PATH="$ROOT/build/cli/ctl:$ROOT/build/cli/runner:$PATH"
+exec "$ROOT/build/src/grold-omarchy-vpn" "$@"

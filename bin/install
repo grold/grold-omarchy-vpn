@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+"$ROOT/bin/build"
+
+# Link or copy shell plugin to user plugins directory so Omarchy shell discovers it immediately
+USER_PLUGINS_DIR="$HOME/.config/omarchy/plugins/grold.vpn"
+mkdir -p "$USER_PLUGINS_DIR"
+cp -r "$ROOT/plugin/"* "$USER_PLUGINS_DIR/"
+echo "Installed Omarchy Shell plugin into $USER_PLUGINS_DIR"
+
+if command -v omarchy-shell >/dev/null 2>&1; then
+    omarchy-shell shell rescanPlugins 2>/dev/null || true
+fi
+
+cd "$ROOT/pkgbuild"
+exec makepkg -fsi "$@"

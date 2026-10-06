@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=grold-omarchy-vpn
+Comment=WireGuard and AmneziaWG VPN connection manager
+Exec=grold-omarchy-vpn
+Icon=grold-omarchy-vpn
+Terminal=false
+Categories=Network;Utility;
+StartupWMClass=grold-omarchy-vpn

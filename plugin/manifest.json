@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "grold.vpn",
+  "name": "grold-omarchy-vpn",
+  "version": "1.0.0",
+  "author": "grold",
+  "license": "MIT",
+  "description": "WireGuard and AmneziaWG VPN status, connection switching, live telemetry, and split tunneling in the Omarchy bar.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "VPN",
+    "description": "Toggle WireGuard/AmneziaWG VPN, monitor speeds, switch profiles, and launch management app.",
+    "category": "Network",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 2
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Refresh interval (seconds)",
+        "min": 1,
+        "max": 60,
+        "step": 1,
+        "defaultValue": 2
+      }
+    ]
+  }
+}

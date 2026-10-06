@@ -1,0 +1,138 @@
+import QtQuick
+import Quickshell
+import Quickshell.Io
+
+Item {
+    id: root
+
+    property bool connected: false
+    property string profileName: ""
+    property string activeInterface: ""
+    property real rxBytes: 0
+    property real txBytes: 0
+    property real rxRate: 0
+    property real txRate: 0
+    property real uptime: 0
+    property string splitMode: "off"
+    property bool killSwitch: false
+    property var profiles: []
+    property bool refreshing: false
+
+    property string _targetProfileToConnect: ""
+
+    Timer {
+        id: pollTimer
+        interval: 2000
+        repeat: true
+        running: true
+        onTriggered: root.refresh()
+    }
+
+    Component.onCompleted: {
+        root.refresh()
+        root.refreshProfiles()
+    }
+
+    function refresh() {
+        if (!statusProcess.running) {
+            statusProcess.running = true
+        }
+    }
+
+    function refreshProfiles() {
+        if (!profilesListProcess.running) {
+            profilesListProcess.running = true
+        }
+    }
+
+    function toggle() {
+        if (!toggleProcess.running) {
+            toggleProcess.running = true
+        }
+    }
+
+    function connectProfile(name) {
+        var home = Quickshell.env("HOME")
+        var path = home + "/.config/grold-omarchy-vpn/profiles/" + name + ".conf"
+        _targetProfileToConnect = path
+        if (!connectProcess.running) {
+            connectProcess.running = true
+        }
+    }
+
+    function disconnectVpn() {
+        if (!disconnectProcess.running) {
+            disconnectProcess.running = true
+        }
+    }
+
+    function openApp() {
+        if (!appProcess.running) {
+            appProcess.running = true
+        }
+    }
+
+    Process {
+        id: statusProcess
+        command: ["grold-omarchy-vpn-ctl", "--json", "status"]
+        stdout: SplitParser {
+            onRead: function(line) {
+                try {
+                    var doc = JSON.parse(line)
+                    if (doc && doc.ok && doc.status) {
+                        var st = doc.status
+                        root.connected = st.connected === true
+                        root.profileName = st.profileName || ""
+                        root.activeInterface = st.interface || ""
+                        root.rxBytes = st.rxBytes || 0
+                        root.txBytes = st.txBytes || 0
+                        root.rxRate = st.rxRate || 0
+                        root.txRate = st.txRate || 0
+                        root.uptime = st.uptime || 0
+                        root.splitMode = st.splitMode || "off"
+                        root.killSwitch = st.killSwitch === true
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: toggleProcess
+        command: ["grold-omarchy-vpn-ctl", "toggle"]
+        onExited: function(code) { root.refresh() }
+    }
+
+    Process {
+        id: connectProcess
+        command: ["grold-omarchy-vpn-ctl", "connect", root._targetProfileToConnect]
+        onExited: function(code) { root.refresh() }
+    }
+
+    Process {
+        id: disconnectProcess
+        command: ["grold-omarchy-vpn-ctl", "disconnect"]
+        onExited: function(code) { root.refresh() }
+    }
+
+    Process {
+        id: profilesListProcess
+        command: ["sh", "-c", "ls -1 \"$HOME/.config/grold-omarchy-vpn/profiles/\" 2>/dev/null | grep '\\.conf$' | sed 's/\\.conf$//'"]
+        stdout: SplitParser {
+            property var collected: []
+            onRead: function(line) {
+                var name = String(line || "").trim()
+                if (name !== "") collected.push(name)
+            }
+        }
+        onExited: function(code) {
+            root.profiles = profilesListProcess.stdout.collected.slice()
+            profilesListProcess.stdout.collected = []
+        }
+    }
+
+    Process {
+        id: appProcess
+        command: ["grold-omarchy-vpn"]
+    }
+}
